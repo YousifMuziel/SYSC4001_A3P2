@@ -27,14 +27,12 @@ exam_0001.txt … exam_0020.txt
 At least 20 exam files. Each file contains one line with a
 4-digit student number:
 
-text
-Copy code
+
 0001
 The exam file whose number is 9999 (here exam_0020.txt) is used to
 terminate the simulation.
 
-text
-Copy code
+
 exam_0001.txt
 exam_0002.txt
 ...
