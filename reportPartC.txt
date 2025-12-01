@@ -1,0 +1,112 @@
+## `reportPartC.txt`
+
+
+```text
+
+SYSC4001 – Assignment 3 – Part 2(c)
+Student: 101231344
+
+Deadlock / Livelock Analysis and Execution Order
+
+1. Experimental setup
+
+I implemented two versions of the TA–exam simulation:
+
+• Part 2(a): shared memory only, without any synchronisation.
+• Part 2(b): shared memory plus semaphores protecting the rubric,
+  the selection of questions and the loading of the next exam.
+
+The rubric file contains five lines (questions 1–5), and I created a
+set of exam files with 4-digit student numbers, including an exam with
+the special number 9999. The filenames are listed in order in
+exam_list.txt. I ran both programs with different numbers of TAs
+(for example 2, 3 and 4).
+
+2. Behaviour of the shared-memory–only version (Part 2(a))
+
+In Part 2(a) all processes attach to the same shared memory region,
+but there is no mutual exclusion when:
+
+• correcting rubric lines,
+• choosing which question to mark,
+• loading the next exam.
+
+As a result, the output clearly shows race conditions:
+
+• Two or more TAs sometimes “correct” the rubric for the same
+  question, causing the letter after the comma to jump by more than
+  one ASCII value.
+
+• The same exam question can be marked by several different TAs,
+  even though each question is supposed to be marked only once.
+
+• Occasionally more than one TA tries to move to the next exam at
+  nearly the same time.
+
+In my runs, this program did not enter a strict deadlock or livelock
+state, because there are no blocking synchronization calls other than
+normal process termination. However, the final rubric contents and the
+exact sequence of marked questions are non-deterministic and change
+from run to run. This behaviour illustrates that unprotected critical
+sections can easily lead to inconsistent results.
+
+3. Behaviour of the semaphore-based version (Part 2(b))
+
+In Part 2(b) I use three unnamed POSIX semaphores stored in shared
+memory:
+
+• mutex_rubric – guards all modifications to the rubric,
+• mutex_exam  – guards question selection and loading the next exam,
+• mutex_print – serialises printing (for readable output).
+
+Each TA follows the same high-level behaviour as in Part 2(a)
+(reviewing the rubric and marking exam questions), but the critical
+sections are now protected.
+
+From the simulation runs I observed that:
+
+• Rubric corrections are always applied one at a time, and the
+  messages describing corrections are no longer interleaved.
+
+• For each exam, every question is marked exactly once. No two TAs
+  mark the same question.
+
+• Exams are processed in the order given in exam_list.txt. Once the
+  exam with student number 9999 has all five questions marked, the
+  shared “finished” flag is set and each TA terminates cleanly.
+
+I did not encounter deadlock or livelock in any of my runs. Because
+no TA ever holds more than one semaphore at the same time, the
+necessary circular-wait condition for deadlock cannot occur. Every
+blocked sem_wait is matched by a corresponding sem_post performed by
+another TA.
+
+4. Execution order of processes
+
+Although the exact interleaving still depends on the operating-system
+scheduler and the random delays (0.5–1.0 seconds for rubric decisions,
+1.0–2.0 seconds for marking), the important properties of the
+execution order in Part 2(b) are:
+
+• For each exam, the five questions are taken and marked by TAs one
+  by one without duplication.
+
+• While an exam is in shared memory, multiple TAs may work on it
+  concurrently, but access to the shared data structures is serialised
+  by the semaphores.
+
+• When all questions on the current exam are marked, one TA loads
+  the next exam into shared memory and resets the question flags.
+
+• After the exam containing student number 9999 is processed, all
+  processes detect the finished flag and exit.
+
+5. Conclusion
+
+Part 2(a) demonstrates how a shared-memory concurrency solution can
+run with race conditions when critical sections are not protected.
+Part 2(b) uses semaphores together with the same shared data
+structures to satisfy the mutual exclusion, progress and bounded
+waiting requirements of the critical-section problem. In all
+experiments the semaphore-based solution terminates correctly without
+deadlock or livelock and produces consistent, understandable output.
